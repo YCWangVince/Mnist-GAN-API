@@ -1,5 +1,6 @@
 # Mnist-GAN-API
-This is a simple GAN to generate handwritten numbers based on famous Mnist Dataset.
+This is a simple GAN to generate handwritten numbers based on famous Mnist Dataset, a project mission for USTC
+Python and Deep Learning course.
 
 The code is test on an RTX2080ti GPU workstation, with a Intel-i7 8750 CPU, 32GB RAM and Ubuntu16.04 system.
 The code built on an environment with Python3.6 and CUDA10, with PyTorch structure.
