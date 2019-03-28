@@ -43,7 +43,7 @@ Discriminator:
 Conv(1, 32, kernel_size=5, stride=1) -> LeakyReLU(0.01) -> MaxPool(2, stride=2) -> Conv(32, 64, kernel_size=5, stride=1) ->
 LeakyReLU(0.01) ->  MaxPool(2, stride=2) -> Linear(4*4*64, 4*64) -> LeakyReLU(0.01) -> Linear(4*64, 1) -> Sigmoid
 
-The training loss is classical GAN BCELoss 
+The training loss is classical GAN BCELoss.
 
-
+The usual problem for this network is Mode Collaps especially when the epoch is too large.
 
