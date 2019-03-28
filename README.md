@@ -11,7 +11,7 @@ The GUI interface is designed with pyqt5 package and Qtdesigner.
 Guidance:
   open terminal and go to the right path
   
-  python3 ./GUI.py (GUI interface presents)
+   $python3 ./GUI.py (GUI interface presents)
   
   Train Menu: Click 'Start Training' to start training the network. Click 'Stop Training' to stop
   
@@ -26,10 +26,16 @@ Guidance:
   
   During the training, some of the genearted image will be showed under the 'Results' and 'Epoch = **' labels.
   
+  After the training ends, use terminal and go to the right path.
+  $ tensorboard --logdir=mm-dd_hh-MM-ss  
+  (Click the URL and open it on browser, you will find some of the training results and information text.)
+  
   Other information like learning rate will be showed on terminal.
   
   In addition, because of the large number of the dataset, the first time training seems start slowly because of the process
       of reading data. Please wait for a few minutes and do not click the 'Stop Training' or 'Pause/Resume'.
+
+
 
 The network structure is like the following:
 
