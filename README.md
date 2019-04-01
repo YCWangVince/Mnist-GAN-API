@@ -2,7 +2,7 @@
 This is a simple GAN to generate handwritten numbers based on famous Mnist Dataset, a project mission for USTC
 Python and Deep Learning course.
 
-The code is test on an RTX2080ti GPU workstation, with a Intel-i7 8750 CPU, 32GB RAM and Ubuntu16.04 system.
+The code is tested on an RTX2080ti GPU workstation, with a Intel-i7 8750 CPU, 32GB RAM and Ubuntu16.04 system.
 The code built on an environment with Python3.6 and CUDA10, with PyTorch structure.
 The Dataset comes from a popular handwritten number dataset Mnist, built by LeCun et al. http://yann.lecun.com/exdb/mnist/
 The code utilizes 60,000 images from the Dataset to train the network.
@@ -19,7 +19,7 @@ Guidance:
       on the 'Recent Settings' label. (All settings cannot be changed when the network training starts or pauses.)
   
   'Pause/Resume' Button: Click the button the training will be suspended. Click again and it will resume. 
-      You cannnot start a new training process now but stop this process first.
+      You cannot start a new training process now but stop this process first.
       
   'Set to Default' Button: Click the button, and all settings will go back to default ones showed on the 'Default Settings' 
       label above. (All settings cannot be set to default value when the network training starts or pauses.)
