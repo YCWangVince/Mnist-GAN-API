@@ -13,6 +13,9 @@ Guidance:
   
    $python3 ./GUI.py (GUI interface presents)
   
+  'Download Data' Button: Click the button first and it will download and unzip the Mnist Dataset. However, because of the huge load, it may take an hour.
+  If you want to skip that period, please extract the data directly and set the global variable 'data_ready' as True.
+  
   Train Menu: Click 'Start Training' to start training the network. Click 'Stop Training' to stop
   
   Setting Menu: Adapt the network settings such as learning rate, batch size, max epoch etc. The change will be showed
