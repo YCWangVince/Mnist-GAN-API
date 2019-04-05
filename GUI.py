@@ -14,13 +14,14 @@ import Net_Model
 import torch.optim as optim
 import torch.nn as nn
 import numpy as np
+import random
 from datetime import datetime
 import os
 from tensorboardX import SummaryWriter
 import torchvision
 import torchvision.utils as vutils
 import imageio
-
+from download_data import read_data_sets,my_mkdir,load_mnist_train,load_mnist_test
 '''
 Some global Parameters, in order to share information between threads
 '''
@@ -47,6 +48,9 @@ netpauselabel= False
 
 global now_epoch
 now_epoch =1
+
+global data_ready
+data_ready = True  #if use zipped dataset directly, please set True Here
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 train_path = './Dataset/train/'
@@ -293,6 +297,48 @@ class TrainingThread(QtCore.QThread):
             os.remove('./Result/show4')
         self.stoptrigger.emit()         #end thread
 
+class DownloadThread(QtCore.QThread):
+    stoptrigger = QtCore.pyqtSignal()
+
+    def __init__(self):
+        super(DownloadThread,self).__init__()
+
+    def run(self):
+        print("===== running - input_data() script =====")
+        read_data_sets("./Dataset")
+        print("=============   =============")
+
+        path = './Dataset/'
+        train_images, train_labels = load_mnist_train(path)
+        test_images, test_labels = load_mnist_test(path)
+
+        train_o_dir = './Dataset/train/'
+        test_o_dir = './Dataset/test/'
+
+        for j in range(len(train_labels)):
+            data_path = train_o_dir
+            img = np.reshape(train_images[j], [28, 28])
+            my_mkdir(data_path)
+            imgname = 'train_' + str(len(
+                [name for name in os.listdir(data_path) if os.path.isfile(os.path.join(data_path, name))]) + 1) + '.png'
+            imgpath = os.path.join(data_path, imgname)
+            imageio.imwrite(imgpath, img)
+            print('train', len(
+                [name for name in os.listdir(data_path) if os.path.isfile(os.path.join(data_path, name))]) + 1)
+
+        for j in range(len(test_labels)):
+            data_path = test_o_dir
+            img = np.reshape(test_images[j], [28, 28])
+            my_mkdir(data_path)
+            imgname = 'test_' + str(len(
+                [name for name in os.listdir(data_path) if os.path.isfile(os.path.join(data_path, name))]) + 1) + '.png'
+            imgpath = os.path.join(data_path, imgname)
+            imageio.imwrite(imgpath, img)
+            print('test', len(
+                [name for name in os.listdir(data_path) if os.path.isfile(os.path.join(data_path, name))]) + 1)
+        data_ready = True
+        self.Statuslabel.setText('Status: Stop')
+        self.stoptrigger.emit()
 
 '''
 update results thread class
@@ -307,6 +353,14 @@ class Updateresult(QtCore.QThread):
                 self.trigger.emit()
                 self.sleep(1)
 
+class Updatedataset(QtCore.QThread):
+    trigger = QtCore.pyqtSignal()
+    def __init__(self):
+        super(Updatedataset,self).__init__()
+    def run(self):
+        while 1:
+            self.trigger.emit()
+            self.sleep(1)
 '''
 UI window class
 initially created by Qtdesigner
@@ -333,6 +387,9 @@ class Ui_MainWindow(object):
         self.setdefaultbutton = QtWidgets.QPushButton(self.horizontalLayoutWidget)
         self.setdefaultbutton.setObjectName("setdefaultbutton")
         self.horizontalLayout.addWidget(self.setdefaultbutton)
+        self.downloaddata = QtWidgets.QPushButton(self.horizontalLayoutWidget)
+        self.downloaddata.setObjectName("downloaddata")
+        self.horizontalLayout.addWidget(self.downloaddata)
         self.label_3 = QtWidgets.QLabel(self.centralwidget)
         self.label_3.setGeometry(QtCore.QRect(56, 7, 491, 71))
         font = QtGui.QFont()
@@ -876,15 +933,24 @@ class Ui_MainWindow(object):
         self.actionStart_Training.triggered.connect(self.settraining)
         self.actionStop_Training.triggered.connect(self.setstop)
         self.pausebutton.clicked.connect(self.setpauseresume)
+        self.downloaddata.clicked.connect(self.downloadMnist)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     '''
     a lot of parameter setting functions connection 
     
     '''
+    def downloadMnist(self):
+        global data_ready
+        if data_ready == False:
+            self.Statuslabel.setText('Status:Downloading...')
+            self.th = DownloadThread()
+            self.th.start()
+
 
     def settraining(self):
-        if self.Statuslabel.text() == 'Status: Stop':
+        global data_ready
+        if self.Statuslabel.text() == 'Status: Stop' and data_ready==True:
             self.Statuslabel.setText('Status: Training...')
             global nettraininglabel
             nettraininglabel = True
@@ -896,21 +962,25 @@ class Ui_MainWindow(object):
 
 
     def setstop(self):
-        self.Statuslabel.setText('Status: Stop')
-        global nettraininglabel
-        nettraininglabel = False
-        global netpauselabel
-        netpauselabel = False  #stop training
+        global data_ready
+        if data_ready==True:
+            self.Statuslabel.setText('Status: Stop')
+            global nettraininglabel
+            nettraininglabel = False
+            global netpauselabel
+            netpauselabel = False  #stop training
 
     def setpauseresume(self):
-        global netpauselabel
-        if self.Statuslabel.text() == 'Status: Pause':
-            self.Statuslabel.setText('Status: Training...')
-            netpauselabel = False
+        global data_ready
+        if data_ready == True:
+            global netpauselabel
+            if self.Statuslabel.text() == 'Status: Pause':
+                self.Statuslabel.setText('Status: Training...')
+                netpauselabel = False
 
-        elif self.Statuslabel.text() == 'Status: Training...':
-            self.Statuslabel.setText('Status: Pause')
-            netpauselabel = True            #pause and resume
+            elif self.Statuslabel.text() == 'Status: Training...':
+                self.Statuslabel.setText('Status: Pause')
+                netpauselabel = True            #pause and resume
 
     def setalldefault(self):                # set default parameters
         if self.Statuslabel.text() == 'Status: Stop':
@@ -1073,11 +1143,66 @@ class Ui_MainWindow(object):
         elif self.Statuslabel.text() == 'Status: Stop':
             self.epochlabel.setText(str(now_epoch))
 
+    def updatedataset(self):      #show results
+        self.label_15.setPixmap(
+            QtGui.QPixmap("./Dataset/train/train_" + str(random.randint(1, 1000)) + ".png"))
+        self.label_27.setPixmap(
+            QtGui.QPixmap("./Dataset/train/train_" + str(random.randint(1, 1000)) + ".png"))
+        self.label_23.setPixmap(
+            QtGui.QPixmap("./Dataset/train/train_" + str(random.randint(1, 1000)) + ".png"))
+        self.label_10.setPixmap(
+            QtGui.QPixmap("./Dataset/train/train_" + str(random.randint(1, 1000)) + ".png"))
+        self.label_13.setPixmap(
+            QtGui.QPixmap("./Dataset/train/train_" + str(random.randint(1, 1000)) + ".png"))
+        self.label_17.setPixmap(
+            QtGui.QPixmap("./Dataset/train/train_" + str(random.randint(1, 1000)) + ".png"))
+        self.label_29.setPixmap(
+            QtGui.QPixmap("./Dataset/train/train_" + str(random.randint(1, 1000)) + ".png"))
+        self.label_21.setPixmap(
+            QtGui.QPixmap("./Dataset/train/train_" + str(random.randint(1, 1000)) + ".png"))
+        self.label_14.setPixmap(
+            QtGui.QPixmap("./Dataset/train/train_" + str(random.randint(1, 1000)) + ".png"))
+        self.label_28.setPixmap(
+            QtGui.QPixmap("./Dataset/train/train_" + str(random.randint(1, 1000)) + ".png"))
+        self.label_18.setPixmap(
+            QtGui.QPixmap("./Dataset/train/train_" + str(random.randint(1, 1000)) + ".png"))
+        self.label_5.setPixmap(
+            QtGui.QPixmap("./Dataset/train/train_" + str(random.randint(1, 1000)) + ".png"))
+        self.label_9.setPixmap(
+            QtGui.QPixmap("./Dataset/train/train_" + str(random.randint(1, 1000)) + ".png"))
+        self.label_12.setPixmap(
+            QtGui.QPixmap("./Dataset/train/train_" + str(random.randint(1, 1000)) + ".png"))
+        self.label_16.setPixmap(
+            QtGui.QPixmap("./Dataset/train/train_" + str(random.randint(1, 1000)) + ".png"))
+        self.label_22.setPixmap(
+            QtGui.QPixmap("./Dataset/train/train_" + str(random.randint(1, 1000)) + ".png"))
+        self.label_26.setPixmap(
+            QtGui.QPixmap("./Dataset/train/train_" + str(random.randint(1, 1000)) + ".png"))
+        self.label_11.setPixmap(
+            QtGui.QPixmap("./Dataset/train/train_" + str(random.randint(1, 1000)) + ".png"))
+        self.label_30.setPixmap(
+            QtGui.QPixmap("./Dataset/train/train_" + str(random.randint(1, 1000)) + ".png"))
+        self.label_7.setPixmap(
+            QtGui.QPixmap("./Dataset/train/train_" + str(random.randint(1, 1000)) + ".png"))
+        self.label_19.setPixmap(
+            QtGui.QPixmap("./Dataset/train/train_" + str(random.randint(1, 1000)) + ".png"))
+        self.label_24.setPixmap(
+            QtGui.QPixmap("./Dataset/train/train_" + str(random.randint(1, 1000)) + ".png"))
+        self.label_20.setPixmap(
+            QtGui.QPixmap("./Dataset/train/train_" + str(random.randint(1, 1000)) + ".png"))
+        self.label_25.setPixmap(
+            QtGui.QPixmap("./Dataset/train/train_" + str(random.randint(1, 1000)) + ".png"))
+        self.label_31.setPixmap(
+            QtGui.QPixmap("./Dataset/train/train_" + str(random.randint(1, 1000)) + ".png"))
+
+
+
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "Mnist GAN"))
         self.pausebutton.setText(_translate("MainWindow", "Pause/Resume"))
         self.setdefaultbutton.setText(_translate("MainWindow", "Set to Default"))
+        self.downloaddata.setText(_translate("MainWindow", "Download Data"))
         self.label_3.setText(_translate("MainWindow", "<html><head/><body><p>Welcome to Mnist GAN Training Program</p><p align=\"right\"><span style=\" font-size:8pt;\">made by Vince (Yicheng Wang)</span></p></body></html>"))
         self.label_4.setText(_translate("MainWindow", "<html><head/><body><p><span style=\" font-size:12pt;\">Default Settings:</span><span style=\" font-size:16pt;\"/></p><p><span style=\" font-size:9pt;\">Learning Rate = 1e-4 </span></p><p><span style=\" font-size:9pt;\">Optimizer = Adam </span></p><p><span style=\" font-size:9pt;\">Input Noise Size = 100 </span></p><p><span style=\" font-size:9pt;\">Batch Size = 100</span></p><p><span style=\" font-size:9pt;\">Max Epoch = 100</span></p><p><br/></p></body></html>"))
         self.label.setText(_translate("MainWindow", "Mnist Dataset"))
@@ -1137,9 +1262,11 @@ if __name__ == '__main__':
   update_data_thread = Updateresult()           #main thread and sub thread
   update_data_thread.trigger.connect(ui.updateepoch)
   update_data_thread.start()
+  update_dataset_thread = Updatedataset()  # main thread and sub thread
+  update_dataset_thread.trigger.connect(ui.updatedataset)
+  update_dataset_thread.start()
   MainWindow.show()
   sys.exit(app.exec_())
-
 
 
 
